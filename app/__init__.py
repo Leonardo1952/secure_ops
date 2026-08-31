@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 
+from app.commands import register_commands
 from app.extensions import db
 
 
@@ -21,6 +22,8 @@ def create_app():
     db.init_app(app)
 
     from app.models import User  # noqa: F401
+
+    register_commands(app)
 
     with app.app_context():
         db.create_all()
