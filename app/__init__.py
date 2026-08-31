@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask, redirect, url_for
 
 from app.commands import register_commands
-from app.extensions import db
+from app.extensions import db, limiter
 
 
 def create_app():
@@ -18,13 +18,18 @@ def create_app():
         "sqlite:///secureops.db",
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["RATELIMIT_STORAGE_URI"] = os.getenv(
+        "RATELIMIT_STORAGE_URI",
+        "memory://",
+    )
 
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     db.init_app(app)
+    limiter.init_app(app)
 
-    from app.models import User  # noqa: F401
+    from app.models import SecurityEvent, User  # noqa: F401
 
     register_commands(app)
 
