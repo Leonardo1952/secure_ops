@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, redirect, url_for
 
 from app.commands import register_commands
 from app.extensions import db
@@ -19,6 +19,9 @@ def create_app():
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
     db.init_app(app)
 
     from app.models import User  # noqa: F401
@@ -28,11 +31,14 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    from app.auth.routes import auth_bp
+    from app.dashboard.routes import dashboard_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
+
     @app.get("/")
     def index():
-        return {
-            "application": "SecureOps",
-            "status": "running",
-        }
+        return redirect(url_for("auth.login"))
 
     return app

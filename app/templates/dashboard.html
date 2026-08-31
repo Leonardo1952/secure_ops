@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureOps - Dashboard</title>
+</head>
+<body>
+    <main>
+        <h1>SecureOps Dashboard</h1>
+
+        <form method="post" action="{{ url_for('auth.logout') }}">
+            <button type="submit">Logout</button>
+        </form>
+    </main>
+</body>
+</html>

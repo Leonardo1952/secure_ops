@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureOps - Login</title>
+</head>
+<body>
+    <main>
+        <h1>SecureOps</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul>
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+
+            <div>
+                {{ form.username.label }}
+                {{ form.username(autocomplete="username") }}
+                {% for error in form.username.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div>
+                {{ form.password.label }}
+                {{ form.password(autocomplete="current-password") }}
+                {% for error in form.password.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {{ form.submit() }}
+        </form>
+    </main>
+</body>
+</html>
