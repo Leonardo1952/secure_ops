@@ -1,45 +1,46 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SecureOps - Login</title>
-</head>
-<body>
-    <main>
-        <h1>SecureOps</h1>
+{% extends "base.html" %}
+
+{% block title %}SecureOps - Login{% endblock %}
+
+{% block body %}
+<main class="auth-page">
+    <section class="auth-panel">
+        <div class="brand-block">
+            <h1>SecureOps</h1>
+            <p>Security Operations Access</p>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <ul>
+                <ul class="flash-list">
                     {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
+                        <li class="flash-message flash-{{ category }}">{{ message }}</li>
                     {% endfor %}
                 </ul>
             {% endif %}
         {% endwith %}
 
-        <form method="post" action="{{ url_for('auth.login') }}">
+        <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
             {{ form.hidden_tag() }}
 
-            <div>
+            <div class="form-field">
                 {{ form.username.label }}
                 {{ form.username(autocomplete="username") }}
                 {% for error in form.username.errors %}
-                    <span>{{ error }}</span>
+                    <span class="field-error">{{ error }}</span>
                 {% endfor %}
             </div>
 
-            <div>
+            <div class="form-field">
                 {{ form.password.label }}
                 {{ form.password(autocomplete="current-password") }}
                 {% for error in form.password.errors %}
-                    <span>{{ error }}</span>
+                    <span class="field-error">{{ error }}</span>
                 {% endfor %}
             </div>
 
-            {{ form.submit() }}
+            {{ form.submit(class="primary-button") }}
         </form>
-    </main>
-</body>
-</html>
+    </section>
+</main>
+{% endblock %}

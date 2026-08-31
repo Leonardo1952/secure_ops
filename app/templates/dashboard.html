@@ -1,17 +1,78 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SecureOps - Dashboard</title>
-</head>
-<body>
-    <main>
-        <h1>SecureOps Dashboard</h1>
+{% extends "base.html" %}
+
+{% block title %}SecureOps - Dashboard{% endblock %}
+
+{% block body %}
+<main class="dashboard-page">
+    <header class="dashboard-header">
+        <div>
+            <h1>SecureOps</h1>
+            <p>Security Monitoring Dashboard</p>
+        </div>
 
         <form method="post" action="{{ url_for('auth.logout') }}">
-            <button type="submit">Logout</button>
+            <button class="secondary-button" type="submit">Logout</button>
         </form>
-    </main>
-</body>
-</html>
+    </header>
+
+    <section class="dashboard-section" aria-labelledby="overview-title">
+        <h2 id="overview-title">Security Overview</h2>
+
+        <div class="metric-grid">
+            <article class="metric-card">
+                <span>Total Events</span>
+                <strong data-testid="total-events">{{ total_events }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>Failed Logins</span>
+                <strong data-testid="failed-logins">{{ failed_logins }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>Access Denied</span>
+                <strong data-testid="access-denied">{{ access_denied }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>High / Critical</span>
+                <strong data-testid="high-critical-events">{{ high_critical_events }}</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="dashboard-section" aria-labelledby="events-title">
+        <h2 id="events-title">Recent Security Events</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Event</th>
+                        <th>Severity</th>
+                        <th>Source IP</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in recent_events %}
+                        <tr>
+                            <td>{{ event.created_at.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td>
+                                <span class="severity-badge severity-{{ event.severity | lower }}">
+                                    {{ event.severity }}
+                                </span>
+                            </td>
+                            <td>{{ event.source_ip or "-" }}</td>
+                            <td>{{ event.description }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td class="empty-state" colspan="5">No security events recorded.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}
