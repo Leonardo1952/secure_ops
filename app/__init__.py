@@ -38,9 +38,11 @@ def create_app():
 
     from app.auth.routes import auth_bp
     from app.dashboard.routes import dashboard_bp
+    from app.events.routes import events_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(events_bp)
 
     @app.get("/")
     def index():

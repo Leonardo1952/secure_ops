@@ -36,4 +36,5 @@ def index():
         access_denied=access_denied,
         high_critical_events=high_critical_events,
         recent_events=recent_events,
+        show_nav=True,
     )

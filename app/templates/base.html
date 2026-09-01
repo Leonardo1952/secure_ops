@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    {% if show_nav %}
+        <header class="topbar">
+            <a class="topbar-brand" href="{{ url_for('dashboard.index') }}">SecureOps</a>
+            <nav class="topbar-nav" aria-label="Primary navigation">
+                <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+                <a href="{{ url_for('events.index') }}">Security Events</a>
+                <form method="post" action="{{ url_for('auth.logout') }}">
+                    <button class="link-button" type="submit">Logout</button>
+                </form>
+            </nav>
+        </header>
+    {% endif %}
+
     {% block body %}{% endblock %}
 </body>
 </html>
