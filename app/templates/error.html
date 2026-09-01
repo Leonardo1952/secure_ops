@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}SecureOps - {{ status_code }}{% endblock %}
+
+{% block body %}
+<main class="auth-page">
+    <section class="auth-panel">
+        <div class="brand-block">
+            <h1>{{ status_code }}</h1>
+            <p>{{ message }}</p>
+        </div>
+
+        <p class="error-action">
+            <a class="secondary-link" href="{{ url_for('auth.login') }}">Return to login</a>
+        </p>
+    </section>
+</main>
+{% endblock %}
