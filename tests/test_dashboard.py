@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from app import create_app
+from app.dashboard.service import get_dashboard_metrics
 from app.extensions import db
 from app.models import SecurityEvent, User
 
@@ -159,3 +160,134 @@ def test_dashboard_remains_protected(monkeypatch):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/login"
+
+
+def test_dashboard_metrics_calculate_new_indicators(monkeypatch):
+    app = create_test_app(monkeypatch)
+    now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+    with app.app_context():
+        create_event(
+            "AUTH_FAILURE",
+            "MEDIUM",
+            "Failed login.",
+            created_at=now - timedelta(hours=1),
+            source_ip="203.0.113.10",
+        )
+        create_event(
+            "UNAUTHORIZED_ACCESS",
+            "HIGH",
+            "Denied access.",
+            created_at=now - timedelta(hours=2),
+            source_ip="203.0.113.10",
+        )
+        create_event(
+            "RATE_LIMIT_EXCEEDED",
+            "HIGH",
+            "Rate limited.",
+            created_at=now - timedelta(hours=3),
+            source_ip="198.51.100.25",
+        )
+        create_event(
+            "LOGOUT",
+            "CRITICAL",
+            "Critical event.",
+            created_at=now - timedelta(days=2),
+            source_ip="192.0.2.44",
+        )
+
+        metrics = get_dashboard_metrics(now=now)
+
+    assert metrics["total_events"] == 4
+    assert metrics["events_last_24h"] == 3
+    assert metrics["failed_logins"] == 1
+    assert metrics["unauthorized_access"] == 1
+    assert metrics["high_critical_events"] == 3
+    assert metrics["unique_source_ips"] == 3
+    assert metrics["rate_limit_hits"] == 1
+
+
+def test_dashboard_metrics_severity_distribution(monkeypatch):
+    app = create_test_app(monkeypatch)
+
+    with app.app_context():
+        create_event("AUTH_SUCCESS", "INFO", "Info event.")
+        create_event("AUTH_FAILURE", "MEDIUM", "Medium event.")
+        create_event("UNAUTHORIZED_ACCESS", "HIGH", "High event.")
+
+        metrics = get_dashboard_metrics()
+
+    distribution = {
+        item["severity"]: item["count"]
+        for item in metrics["severity_distribution"]
+    }
+
+    assert distribution == {
+        "INFO": 1,
+        "LOW": 0,
+        "MEDIUM": 1,
+        "HIGH": 1,
+        "CRITICAL": 0,
+    }
+
+
+def test_dashboard_metrics_top_source_ips(monkeypatch):
+    app = create_test_app(monkeypatch)
+
+    with app.app_context():
+        for _ in range(3):
+            create_event("AUTH_FAILURE", "MEDIUM", "IP 1.", source_ip="203.0.113.10")
+        for _ in range(2):
+            create_event("AUTH_FAILURE", "MEDIUM", "IP 2.", source_ip="198.51.100.25")
+        create_event("AUTH_FAILURE", "MEDIUM", "IP 3.", source_ip="192.0.2.44")
+
+        metrics = get_dashboard_metrics()
+
+    assert metrics["top_source_ips"] == [
+        {"source_ip": "203.0.113.10", "count": 3},
+        {"source_ip": "198.51.100.25", "count": 2},
+        {"source_ip": "192.0.2.44", "count": 1},
+    ]
+
+
+def test_dashboard_metrics_event_type_distribution_and_events_over_time(monkeypatch):
+    app = create_test_app(monkeypatch)
+    now = datetime(2026, 9, 1, 12, 30, 0, tzinfo=timezone.utc)
+
+    with app.app_context():
+        create_event(
+            "AUTH_FAILURE",
+            "MEDIUM",
+            "Failed login.",
+            created_at=now - timedelta(hours=1),
+        )
+        create_event(
+            "AUTH_FAILURE",
+            "MEDIUM",
+            "Failed login.",
+            created_at=now - timedelta(hours=1, minutes=10),
+        )
+        create_event(
+            "AUTH_SUCCESS",
+            "INFO",
+            "Successful login.",
+            created_at=now - timedelta(hours=3),
+        )
+        create_event(
+            "LOGOUT",
+            "INFO",
+            "Old logout.",
+            created_at=now - timedelta(days=3),
+        )
+
+        metrics = get_dashboard_metrics(now=now)
+
+    assert metrics["event_type_distribution"] == [
+        {"event_type": "AUTH_FAILURE", "count": 2},
+        {"event_type": "AUTH_SUCCESS", "count": 1},
+        {"event_type": "LOGOUT", "count": 1},
+    ]
+    assert metrics["events_over_time"] == [
+        {"hour": "2026-09-01 09:00:00", "count": 1},
+        {"hour": "2026-09-01 11:00:00", "count": 2},
+    ]

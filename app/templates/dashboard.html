@@ -31,6 +31,22 @@
                 <span>High / Critical</span>
                 <strong data-testid="high-critical-events">{{ high_critical_events }}</strong>
             </article>
+            <article class="metric-card">
+                <span>Events Last 24h</span>
+                <strong data-testid="events-last-24h">{{ dashboard_metrics.events_last_24h }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>Unique Source IPs</span>
+                <strong data-testid="unique-source-ips">{{ dashboard_metrics.unique_source_ips }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>Rate Limit Hits</span>
+                <strong data-testid="rate-limit-hits">{{ dashboard_metrics.rate_limit_hits }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>Version</span>
+                <strong data-testid="app-version">v{{ app_version }}</strong>
+            </article>
         </div>
     </section>
 

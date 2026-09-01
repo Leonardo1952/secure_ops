@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import redirect, request, session, url_for
+from flask import redirect, session, url_for
 
 from app.events.service import record_security_event
 
@@ -12,7 +12,6 @@ def login_required(view):
             record_security_event(
                 event_type="UNAUTHORIZED_ACCESS",
                 severity="HIGH",
-                source_ip=request.remote_addr,
                 description="Attempt to access protected resource.",
             )
             return redirect(url_for("auth.login"))

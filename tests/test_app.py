@@ -1,6 +1,6 @@
 from app import create_app
 from app.extensions import db
-from app.models import User
+from app.models import SecurityEvent, User
 
 
 def make_app(tmp_path, monkeypatch):
@@ -28,6 +28,57 @@ def test_root_redirects_to_login(tmp_path, monkeypatch):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/login"
+
+
+def test_health_returns_public_application_status(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    client = app.test_client()
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json["status"] == "healthy"
+    assert response.json["application"] == "SecureOps"
+    assert response.json["version"] == "1.1.0"
+
+
+def test_proxy_fix_uses_forwarded_for_for_remote_addr(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+
+    @app.get("/remote-addr-test")
+    def remote_addr_test():
+        from flask import request
+
+        return {"remote_addr": request.remote_addr, "secure": request.is_secure}
+
+    client = app.test_client()
+    response = client.get(
+        "/remote-addr-test",
+        headers={
+            "X-Forwarded-For": "203.0.113.10",
+            "X-Forwarded-Proto": "https",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["remote_addr"] == "203.0.113.10"
+    assert response.json["secure"] is True
+
+
+def test_events_record_forwarded_source_ip(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    client = app.test_client()
+
+    client.get(
+        "/dashboard",
+        headers={"X-Forwarded-For": "198.51.100.25"},
+    )
+
+    with app.app_context():
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "UNAUTHORIZED_ACCESS"
+        assert event.source_ip == "198.51.100.25"
 
 
 def test_login_page_renders_html_form(tmp_path, monkeypatch):

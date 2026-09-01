@@ -1,18 +1,27 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_limiter.errors import RateLimitExceeded
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.commands import register_commands
 from app.events.service import record_security_event
 from app.extensions import csrf, db, limiter
+from app.version import APP_VERSION
 
 
 def create_app():
     load_dotenv()
 
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,
+        x_proto=1,
+        x_host=1,
+        x_prefix=0,
+    )
     app_env = os.getenv("APP_ENV", "development")
     secret_key = os.getenv("SECRET_KEY")
     insecure_secret_placeholder = os.getenv(
@@ -36,6 +45,10 @@ def create_app():
         "RATELIMIT_STORAGE_URI",
         "memory://",
     )
+    app.config["APP_VERSION"] = APP_VERSION
+    app.config["SECURITY_TLS"] = os.getenv("SECURITY_TLS", "TLS 1.2 / 1.3")
+    app.config["SECURITY_PQC"] = os.getenv("SECURITY_PQC", "X25519MLKEM768")
+    app.config["SECURITY_SSL_LABS"] = os.getenv("SECURITY_SSL_LABS", "A+")
 
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -63,6 +76,23 @@ def create_app():
     @app.get("/")
     def index():
         return redirect(url_for("auth.login"))
+
+    @app.get("/health")
+    def health():
+        return jsonify(
+            {
+                "status": "healthy",
+                "application": "SecureOps",
+                "environment": app.config["APP_ENV"],
+                "version": app.config["APP_VERSION"],
+            }
+        )
+
+    @app.context_processor
+    def inject_app_metadata():
+        return {
+            "app_version": app.config["APP_VERSION"],
+        }
 
     @app.after_request
     def add_security_headers(response):
@@ -100,7 +130,6 @@ def create_app():
             record_security_event(
                 event_type="RATE_LIMIT_EXCEEDED",
                 severity="HIGH",
-                source_ip=request.remote_addr,
                 description="Authentication rate limit exceeded.",
             )
 

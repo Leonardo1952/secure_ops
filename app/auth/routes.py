@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, session, url_for
 
 from app.auth.forms import LoginForm
 from app.events.service import record_security_event
@@ -28,7 +28,6 @@ def login():
             record_security_event(
                 event_type="AUTH_SUCCESS",
                 severity="INFO",
-                source_ip=request.remote_addr,
                 description="Successful authentication.",
             )
 
@@ -37,7 +36,6 @@ def login():
         record_security_event(
             event_type="AUTH_FAILURE",
             severity="MEDIUM",
-            source_ip=request.remote_addr,
             description="Invalid authentication attempt.",
         )
         flash("Invalid username or password.", "error")
@@ -47,12 +45,10 @@ def login():
 
 @auth_bp.post("/logout")
 def logout():
-    source_ip = request.remote_addr
     session.clear()
     record_security_event(
         event_type="LOGOUT",
         severity="INFO",
-        source_ip=source_ip,
         description="User session terminated.",
     )
 
