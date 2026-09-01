@@ -96,24 +96,43 @@ jobs:
               sudo systemctl restart secureops
               sudo systemctl is-active --quiet secureops
 
-              curl \
-                --fail \
-                --silent \
-                --show-error \
-                --head \
-                http://127.0.0.1:8000/login
+              echo "Waiting for SecureOps to become healthy..."
+
+              for attempt in {1..10}; do
+                if curl \
+                  --fail \
+                  --silent \
+                  --show-error \
+                  http://127.0.0.1:8000/health > /dev/null; then
+                  echo "SecureOps is healthy."
+                  break
+                fi
+
+                if [ "$attempt" -eq 10 ]; then
+                  echo "SecureOps failed to become healthy."
+                  sudo systemctl status secureops --no-pager
+                  exit 1
+                fi
+
+                echo "Attempt $attempt/10 failed; retrying in 2 seconds..."
+                sleep 2
+              done
           EOF
 
       - name: Verify public HTTPS
         run: |
-          curl \
+          response=$(curl \
             --fail \
             --silent \
             --show-error \
-            --head \
             --retry 5 \
             --retry-delay 3 \
-            https://secureops.leonardooliveira.dev/login
+            https://secureops.leonardooliveira.dev/health)
+
+          echo "$response"
+
+          echo "$response" | grep -q '"status":"healthy"'
+          echo "$response" | grep -q '"version":"1.1.0"'
 
       - name: Remove SSH key
         if: always()
