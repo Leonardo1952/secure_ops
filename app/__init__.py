@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
@@ -8,6 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from app.commands import register_commands
 from app.events.service import record_security_event
 from app.extensions import csrf, db, limiter
+from app.security import get_security_status
 from app.version import APP_VERSION
 
 
@@ -92,6 +94,8 @@ def create_app():
     def inject_app_metadata():
         return {
             "app_version": app.config["APP_VERSION"],
+            "current_time": datetime.now(timezone.utc),
+            "security_status": get_security_status(app),
         }
 
     @app.after_request

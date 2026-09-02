@@ -155,6 +155,44 @@ def test_events_filter_by_type(monkeypatch):
     assert b"Success event." not in response.data
 
 
+def test_events_search_matches_description_event_type_and_source_ip(monkeypatch):
+    app = create_test_app(monkeypatch)
+    client = app.test_client()
+
+    with app.app_context():
+        user_id = create_user()
+        create_event(
+            "AUTH_FAILURE",
+            "MEDIUM",
+            "Invalid credentials.",
+            source_ip="203.0.113.10",
+        )
+        create_event(
+            "LOGOUT",
+            "INFO",
+            "Session ended.",
+            source_ip="198.51.100.25",
+        )
+
+    authenticate(client, user_id)
+
+    description_response = client.get("/events?q=credentials")
+    type_response = client.get("/events?q=LOGOUT")
+    ip_response = client.get("/events?q=198.51.100.25")
+
+    assert description_response.status_code == 200
+    assert b"Invalid credentials." in description_response.data
+    assert b"Session ended." not in description_response.data
+
+    assert type_response.status_code == 200
+    assert b"LOGOUT" in type_response.data
+    assert b"Invalid credentials." not in type_response.data
+
+    assert ip_response.status_code == 200
+    assert b"198.51.100.25" in ip_response.data
+    assert b"203.0.113.10" not in ip_response.data
+
+
 def test_events_filter_by_severity_and_type(monkeypatch):
     app = create_test_app(monkeypatch)
     client = app.test_client()
@@ -251,9 +289,10 @@ def test_events_pagination_preserves_filters(monkeypatch):
             )
 
     authenticate(client, user_id)
-    response = client.get("/events?severity=HIGH&type=AUTH_FAILURE")
+    response = client.get("/events?severity=HIGH&type=AUTH_FAILURE&q=Filtered")
 
     assert response.status_code == 200
     assert b"page=2" in response.data
     assert b"severity=HIGH" in response.data
     assert b"type=AUTH_FAILURE" in response.data
+    assert b"q=Filtered" in response.data

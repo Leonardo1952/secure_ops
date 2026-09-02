@@ -5,22 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}SecureOps{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     {% if show_nav %}
-        <header class="topbar">
-            <a class="topbar-brand" href="{{ url_for('dashboard.index') }}">SecureOps</a>
-            <nav class="topbar-nav" aria-label="Primary navigation">
-                <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
-                <a href="{{ url_for('events.index') }}">Security Events</a>
-                <form method="post" action="{{ url_for('auth.logout') }}">
+        <div class="app-shell">
+            <aside class="sidebar" aria-label="SecureOps navigation">
+                <a class="sidebar-brand" href="{{ url_for('dashboard.index') }}">
+                    <span class="brand-mark" aria-hidden="true">SO</span>
+                    <span>
+                        <strong>SecureOps</strong>
+                        <small>Security Console</small>
+                    </span>
+                </a>
+
+                <nav class="sidebar-nav" aria-label="Primary navigation">
+                    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+                    <a href="{{ url_for('events.index') }}">Security Events</a>
+                    <a href="{{ url_for('dashboard.index') }}#analytics">Analytics</a>
+                    <a href="{{ url_for('dashboard.index') }}#system-status">System Status</a>
+                </nav>
+
+                <div class="sidebar-group">
+                    <span>Security</span>
+                    <a href="{{ url_for('dashboard.index') }}#active-controls">Authentication</a>
+                    <a href="{{ url_for('dashboard.index') }}#active-controls">Access Control</a>
+                </div>
+
+                <form class="sidebar-logout" method="post" action="{{ url_for('auth.logout') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="link-button" type="submit">Logout</button>
                 </form>
-            </nav>
-        </header>
-    {% endif %}
+            </aside>
 
-    {% block body %}{% endblock %}
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <h1>{% block page_title %}SecureOps{% endblock %}</h1>
+                        <p>{% block page_subtitle %}Security Monitoring &amp; DevSecOps{% endblock %}</p>
+                    </div>
+                    <div class="header-meta" aria-label="Application status">
+                        <span class="status-pill">{{ security_status.environment | default("production") | upper }}</span>
+                        <span class="status-pill healthy">HEALTHY</span>
+                        <span class="version-pill">v{{ app_version }}</span>
+                        <time>{{ current_time.strftime("%Y-%m-%d %H:%M:%S") if current_time else "" }}</time>
+                    </div>
+                </header>
+
+                <main class="content-main">
+                    {{ self.body() }}
+                </main>
+
+                <footer class="app-footer">
+                    <span>SecureOps v{{ app_version }}</span>
+                    <span>{{ security_status.environment | default("production") | title }}</span>
+                    <span>Security Monitoring &amp; DevSecOps</span>
+                </footer>
+            </div>
+        </div>
+    {% else %}
+        {% block body %}{% endblock %}
+    {% endif %}
+    {% block scripts %}{% endblock %}
 </body>
 </html>

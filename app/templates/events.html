@@ -1,103 +1,111 @@
 {% extends "base.html" %}
 
 {% block title %}SecureOps - Security Events{% endblock %}
+{% block page_title %}Security Events{% endblock %}
+{% block page_subtitle %}Search and filter recorded security telemetry in console format.{% endblock %}
 
 {% block body %}
-<main class="dashboard-page">
-    <header class="dashboard-header">
+<section class="panel" aria-labelledby="filters-title">
+    <div class="panel-header">
         <div>
-            <h1>SecureOps</h1>
-            <p>Security Events</p>
+            <h2 id="filters-title">Event Filters</h2>
+            <p>{{ pagination.total }} result{{ "" if pagination.total == 1 else "s" }} matching current filters</p>
         </div>
-    </header>
+    </div>
 
-    <section class="dashboard-section" aria-labelledby="filters-title">
-        <h2 id="filters-title">Filters</h2>
+    <form class="filter-bar" method="get" action="{{ url_for('events.index') }}">
+        <div class="filter-field search-field">
+            <label for="q">Search</label>
+            <input id="q" name="q" value="{{ search }}" placeholder="Event, source IP or description">
+        </div>
 
-        <form class="filter-bar" method="get" action="{{ url_for('events.index') }}">
-            <div class="filter-field">
-                <label for="severity">Severity</label>
-                <select id="severity" name="severity">
-                    <option value="">All</option>
-                    {% for severity in severities %}
-                        <option value="{{ severity }}" {% if selected_severity == severity %}selected{% endif %}>
-                            {{ severity }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="filter-field">
+            <label for="severity">Severity</label>
+            <select id="severity" name="severity">
+                <option value="">All</option>
+                {% for severity in severities %}
+                    <option value="{{ severity }}" {% if selected_severity == severity %}selected{% endif %}>
+                        {{ severity }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
 
-            <div class="filter-field">
-                <label for="type">Event Type</label>
-                <select id="type" name="type">
-                    <option value="">All</option>
-                    {% for event_type in event_types %}
-                        <option value="{{ event_type }}" {% if selected_type == event_type %}selected{% endif %}>
-                            {{ event_type }}
-                        </option>
-                    {% endfor %}
-                    {% if selected_type and selected_type not in event_types %}
-                        <option value="{{ selected_type }}" selected>{{ selected_type }}</option>
-                    {% endif %}
-                </select>
-            </div>
+        <div class="filter-field">
+            <label for="type">Event Type</label>
+            <select id="type" name="type">
+                <option value="">All</option>
+                {% for event_type in event_types %}
+                    <option value="{{ event_type }}" {% if selected_type == event_type %}selected{% endif %}>
+                        {{ event_type }}
+                    </option>
+                {% endfor %}
+                {% if selected_type and selected_type not in event_types %}
+                    <option value="{{ selected_type }}" selected>{{ selected_type }}</option>
+                {% endif %}
+            </select>
+        </div>
 
-            <button class="primary-button" type="submit">Apply Filters</button>
-            <a class="secondary-link" href="{{ url_for('events.index') }}">Clear Filters</a>
-        </form>
-    </section>
+        <button class="primary-button" type="submit">Apply Filters</button>
+        <a class="secondary-link" href="{{ url_for('events.index') }}">Clear Filters</a>
+    </form>
+</section>
 
-    <section class="dashboard-section" aria-labelledby="events-title">
-        <h2 id="events-title">Security Events</h2>
+<section class="panel" aria-labelledby="events-title">
+    <div class="panel-header">
+        <div>
+            <h2 id="events-title">Security Event Console</h2>
+            <p>Newest events first, grouped by timestamp and source</p>
+        </div>
+    </div>
 
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date/Time</th>
-                        <th>Event</th>
-                        <th>Severity</th>
-                        <th>Source IP</th>
-                        <th>Description</th>
+    <div class="table-wrapper console-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Severity</th>
+                    <th>Event</th>
+                    <th>Source</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                    <tr data-testid="event-row">
+                        <td>{{ event.created_at.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                        <td>
+                            <span class="severity-badge severity-{{ event.severity | lower }}">
+                                {{ event.severity }}
+                            </span>
+                        </td>
+                        <td><code>{{ event.event_type }}</code></td>
+                        <td>{{ event.source_ip or "-" }}</td>
+                        <td class="truncate">{{ event.description }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for event in events %}
-                        <tr data-testid="event-row">
-                            <td>{{ event.created_at.strftime("%d/%m/%Y %H:%M:%S") }}</td>
-                            <td>{{ event.event_type }}</td>
-                            <td>
-                                <span class="severity-badge severity-{{ event.severity | lower }}">
-                                    {{ event.severity }}
-                                </span>
-                            </td>
-                            <td>{{ event.source_ip or "-" }}</td>
-                            <td>{{ event.description }}</td>
-                        </tr>
-                    {% else %}
-                        <tr>
-                            <td class="empty-state" colspan="5">No security events found.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                {% else %}
+                    <tr>
+                        <td class="empty-state" colspan="5">No security events found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-        <nav class="pagination" aria-label="Security events pagination">
-            {% if pagination.has_prev %}
-                <a class="secondary-link" href="{{ url_for('events.index', page=pagination.prev_num, severity=selected_severity, type=selected_type) }}">Previous</a>
-            {% else %}
-                <span class="pagination-disabled">Previous</span>
-            {% endif %}
+    <nav class="pagination" aria-label="Security events pagination">
+        {% if pagination.has_prev %}
+            <a class="secondary-link" href="{{ url_for('events.index', page=pagination.prev_num, severity=selected_severity, type=selected_type, q=search) }}">Previous</a>
+        {% else %}
+            <span class="pagination-disabled">Previous</span>
+        {% endif %}
 
-            <span>Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+        <span>Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
 
-            {% if pagination.has_next %}
-                <a class="secondary-link" href="{{ url_for('events.index', page=pagination.next_num, severity=selected_severity, type=selected_type) }}">Next</a>
-            {% else %}
-                <span class="pagination-disabled">Next</span>
-            {% endif %}
-        </nav>
-    </section>
-</main>
+        {% if pagination.has_next %}
+            <a class="secondary-link" href="{{ url_for('events.index', page=pagination.next_num, severity=selected_severity, type=selected_type, q=search) }}">Next</a>
+        {% else %}
+            <span class="pagination-disabled">Next</span>
+        {% endif %}
+    </nav>
+</section>
 {% endblock %}

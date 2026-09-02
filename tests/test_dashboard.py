@@ -70,8 +70,18 @@ def test_dashboard_without_events_renders_zero_indicators(monkeypatch):
     response = client.get("/dashboard")
 
     assert response.status_code == 200
-    assert b"Security Monitoring Dashboard" in response.data
-    assert b'data-testid="total-events">0</strong>' in response.data
+    assert b"Security Operations Dashboard" in response.data
+    assert b"SecureOps v1.1.0" in response.data
+    assert b"Security Posture" in response.data
+    assert b"Active Security Controls" in response.data
+    assert b"SSL Labs" in response.data
+    assert b"A+" in response.data
+    assert b"Security Events - Last 24 Hours" in response.data
+    assert b"Top Source IPs" in response.data
+    assert b"Event Types" in response.data
+    assert b"Severity Distribution" in response.data
+    assert b"PRODUCTION" not in response.data
+    assert b'data-testid="total-events">0 total</span>' in response.data
     assert b'data-testid="failed-logins">0</strong>' in response.data
     assert b'data-testid="access-denied">0</strong>' in response.data
     assert b'data-testid="high-critical-events">0</strong>' in response.data
@@ -104,6 +114,27 @@ def test_dashboard_renders_security_events(monkeypatch):
     assert b"Attempt to access protected resource." in response.data
 
 
+def test_dashboard_renders_top_source_ips(monkeypatch):
+    app = create_test_app(monkeypatch)
+    client = app.test_client()
+
+    with app.app_context():
+        user_id = create_user()
+        create_event(
+            "AUTH_FAILURE",
+            "MEDIUM",
+            "Invalid authentication attempt.",
+            source_ip="203.0.113.10",
+        )
+
+    authenticate(client, user_id)
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert b'data-testid="top-source-ip"' in response.data
+    assert b"203.0.113.10" in response.data
+
+
 def test_dashboard_renders_expected_counters(monkeypatch):
     app = create_test_app(monkeypatch)
     client = app.test_client()
@@ -120,7 +151,7 @@ def test_dashboard_renders_expected_counters(monkeypatch):
     response = client.get("/dashboard")
 
     assert response.status_code == 200
-    assert b'data-testid="total-events">5</strong>' in response.data
+    assert b'data-testid="total-events">5 total</span>' in response.data
     assert b'data-testid="failed-logins">2</strong>' in response.data
     assert b'data-testid="access-denied">1</strong>' in response.data
     assert b'data-testid="high-critical-events">3</strong>' in response.data

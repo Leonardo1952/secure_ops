@@ -35,7 +35,7 @@ def get_dashboard_metrics(now=None):
                 func.count(SecurityEvent.id),
             )
             .group_by(SecurityEvent.event_type)
-            .order_by(SecurityEvent.event_type.asc())
+            .order_by(func.count(SecurityEvent.id).desc(), SecurityEvent.event_type.asc())
             .all()
         )
     ]
