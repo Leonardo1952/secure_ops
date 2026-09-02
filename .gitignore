@@ -14,6 +14,7 @@ venv/
 
 # Database
 instance/
+instance/nginx_collector_state.json
 *.db
 *.sqlite
 *.sqlite3

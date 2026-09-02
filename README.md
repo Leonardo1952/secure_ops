@@ -52,6 +52,44 @@ The application records events such as:
 - `LOGOUT`
 - `UNAUTHORIZED_ACCESS`
 - `RATE_LIMIT_EXCEEDED`
+- `SUSPICIOUS_PATH`
+- `NGINX_403`
+- `NGINX_404`
+
+---
+
+## Nginx Security Telemetry
+
+SecureOps includes a one-shot Nginx collector for infrastructure security telemetry:
+
+```bash
+python scripts/nginx_collector.py
+```
+
+The collector runs outside the Flask/Gunicorn request path. The web application does not read `/var/log/nginx`, does not execute privileged commands and does not require sudo. The operating system user that runs the collector must have read access to the configured Nginx access log.
+
+Configuration:
+
+```text
+NGINX_ACCESS_LOG=/var/log/nginx/access.log
+NGINX_COLLECTOR_STATE=instance/nginx_collector_state.json
+```
+
+Detected events:
+
+- `SUSPICIOUS_PATH` with `HIGH` severity for paths such as `/.env`, `/.git/config`, `/wp-admin`, `/phpmyadmin`, `/server-status` and `/actuator`;
+- `NGINX_403` with `MEDIUM` severity;
+- `NGINX_404` with `LOW` severity.
+
+The collector stores only minimized event data: event type, severity, source IP and a short path-only description. Query strings, cookies, request bodies, full headers, referers and user agents are not stored.
+
+Checkpointing uses inode and byte offset in `instance/nginx_collector_state.json`, which is outside Git. Each execution processes only new lines. If the log is rotated or truncated, the collector safely restarts from the beginning of the current file.
+
+Dry-run mode validates parsing without writing events or changing the checkpoint:
+
+```bash
+python scripts/nginx_collector.py --dry-run
+```
 
 ---
 
