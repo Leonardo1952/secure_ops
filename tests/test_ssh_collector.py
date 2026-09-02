@@ -59,6 +59,27 @@ def test_failed_password_creates_ssh_auth_failure(tmp_path, monkeypatch):
         assert event.description == "SSH authentication failure"
 
 
+def test_iso_failed_password_creates_ssh_auth_failure(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:40:21.123456+00:00 secureops-prod sshd[1234]: "
+            "Failed password for root from 203.0.113.10 port 51234 ssh2",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_AUTH_FAILURE"
+        assert event.severity == "MEDIUM"
+        assert event.source_ip == "203.0.113.10"
+
+
 def test_failed_publickey_creates_ssh_auth_failure(tmp_path, monkeypatch):
     app = create_test_app(tmp_path, monkeypatch)
     log_path = tmp_path / "auth.log"
@@ -67,6 +88,27 @@ def test_failed_publickey_creates_ssh_auth_failure(tmp_path, monkeypatch):
         log_path,
         [
             "Sep  2 00:40:21 server sshd[1234]: "
+            "Failed publickey for root from 203.0.113.11 port 51234 ssh2",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_AUTH_FAILURE"
+        assert event.severity == "MEDIUM"
+        assert event.source_ip == "203.0.113.11"
+
+
+def test_iso_failed_publickey_creates_ssh_auth_failure(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:40:21.123456+00:00 secureops-prod sshd[1234]: "
             "Failed publickey for root from 203.0.113.11 port 51234 ssh2",
         ],
     )
@@ -102,6 +144,48 @@ def test_invalid_user_creates_high_event(tmp_path, monkeypatch):
         assert event.description == "SSH login attempt with invalid user"
 
 
+def test_iso_invalid_user_creates_high_event(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:38:32.907559+00:00 secureops-prod sshd[4690]: "
+            "Invalid user admin from 193.46.255.86 port 29712",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_INVALID_USER"
+        assert event.severity == "HIGH"
+        assert event.source_ip == "193.46.255.86"
+
+
+def test_iso_invalid_user_real_ubnt_creates_high_event(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:15:20.167361+00:00 secureops-prod sshd[4114]: "
+            "Invalid user ubnt from 85.24.246.216 port 60610",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_INVALID_USER"
+        assert event.severity == "HIGH"
+        assert event.source_ip == "85.24.246.216"
+
+
 def test_invalid_user_takes_precedence_over_failed_password(tmp_path, monkeypatch):
     app = create_test_app(tmp_path, monkeypatch)
     log_path = tmp_path / "auth.log"
@@ -110,6 +194,28 @@ def test_invalid_user_takes_precedence_over_failed_password(tmp_path, monkeypatc
         log_path,
         [
             "Sep  2 00:42:00 server sshd[1236]: "
+            "Failed password for invalid user oracle from 203.0.113.30 port 55124 ssh2",
+        ],
+    )
+
+    with app.app_context():
+        result = collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert result.created == 1
+        assert event.event_type == "SSH_INVALID_USER"
+        assert event.severity == "HIGH"
+        assert event.source_ip == "203.0.113.30"
+
+
+def test_iso_invalid_user_takes_precedence_over_failed_password(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:42:00.123456+00:00 secureops-prod sshd[1236]: "
             "Failed password for invalid user oracle from 203.0.113.30 port 55124 ssh2",
         ],
     )
@@ -145,6 +251,27 @@ def test_failed_publickey_invalid_user_takes_precedence(tmp_path, monkeypatch):
         assert event.source_ip == "203.0.113.31"
 
 
+def test_iso_failed_publickey_invalid_user_takes_precedence(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:42:00.123456+00:00 secureops-prod sshd[1236]: "
+            "Failed publickey for invalid user test from 203.0.113.31 port 55124 ssh2",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_INVALID_USER"
+        assert event.severity == "HIGH"
+        assert event.source_ip == "203.0.113.31"
+
+
 def test_failed_publickey_supports_ipv6(tmp_path, monkeypatch):
     app = create_test_app(tmp_path, monkeypatch)
     log_path = tmp_path / "auth.log"
@@ -153,6 +280,26 @@ def test_failed_publickey_supports_ipv6(tmp_path, monkeypatch):
         log_path,
         [
             "Sep  2 00:43:00 server sshd[1237]: "
+            "Failed publickey for root from 2001:db8::10 port 50000 ssh2",
+        ],
+    )
+
+    with app.app_context():
+        collect_ssh_events(log_path, state_path)
+        event = SecurityEvent.query.one()
+
+        assert event.event_type == "SSH_AUTH_FAILURE"
+        assert event.source_ip == "2001:db8::10"
+
+
+def test_iso_failed_publickey_supports_ipv6(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:43:00.123456+00:00 secureops-prod sshd[1237]: "
             "Failed publickey for root from 2001:db8::10 port 50000 ssh2",
         ],
     )
@@ -186,6 +333,28 @@ def test_accepted_publickey_is_ignored(tmp_path, monkeypatch):
         assert SecurityEvent.query.count() == 0
 
 
+def test_iso_accepted_publickey_with_fingerprint_is_ignored(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:44:39.486760+00:00 secureops-prod sshd[4756]: "
+            "Accepted publickey for ubuntu from 20.171.22.169 port 2112 ssh2: "
+            "ED25519 SHA256:example",
+        ],
+    )
+
+    with app.app_context():
+        result = collect_ssh_events(log_path, state_path)
+
+        assert result.processed == 1
+        assert result.created == 0
+        assert result.ignored == 1
+        assert SecurityEvent.query.count() == 0
+
+
 def test_irrelevant_lines_are_ignored(tmp_path, monkeypatch):
     app = create_test_app(tmp_path, monkeypatch)
     log_path = tmp_path / "auth.log"
@@ -206,6 +375,27 @@ def test_irrelevant_lines_are_ignored(tmp_path, monkeypatch):
         assert result.processed == 4
         assert result.created == 0
         assert result.ignored == 4
+        assert SecurityEvent.query.count() == 0
+
+
+def test_iso_connection_closed_by_invalid_user_is_ignored(tmp_path, monkeypatch):
+    app = create_test_app(tmp_path, monkeypatch)
+    log_path = tmp_path / "auth.log"
+    state_path = tmp_path / "state.json"
+    write_log(
+        log_path,
+        [
+            "2026-09-02T00:45:00.123456+00:00 secureops-prod sshd[1239]: "
+            "Connection closed by invalid user admin 203.0.113.10 port 22 [preauth]",
+        ],
+    )
+
+    with app.app_context():
+        result = collect_ssh_events(log_path, state_path)
+
+        assert result.processed == 1
+        assert result.created == 0
+        assert result.ignored == 1
         assert SecurityEvent.query.count() == 0
 
 

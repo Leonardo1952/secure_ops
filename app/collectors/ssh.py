@@ -15,10 +15,7 @@ from app.events.service import record_security_event
 
 LOGGER = logging.getLogger(__name__)
 
-SSHD_MESSAGE_RE = re.compile(
-    r"^[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+"
-    r"\S+\s+sshd\[\d+\]:\s+(?P<message>.+)$"
-)
+SSHD_MESSAGE_RE = re.compile(r"\bsshd\[\d+\]:\s+(?P<message>.+)$")
 
 INVALID_USER_RE = re.compile(
     r"(?:Invalid user \S+ from|Failed (?:password|publickey) for invalid user \S+ from)\s+"
@@ -47,7 +44,7 @@ class CollectorResult:
 
 
 def parse_ssh_line(line):
-    match = SSHD_MESSAGE_RE.match(line.strip())
+    match = SSHD_MESSAGE_RE.search(line.strip())
 
     if not match:
         return None
