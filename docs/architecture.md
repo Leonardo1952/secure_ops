@@ -66,7 +66,7 @@ flowchart TD
     change["Push or Pull Request"] --> tests["pytest"]
     tests --> bandit["Bandit"]
     bandit --> audit["pip-audit"]
-    audit --> approved{"main branch?"}
+    audit --> approved{"master branch?"}
     approved -->|yes| deploy["Deploy to Oracle Cloud"]
     approved -->|no| done["CI complete"]
     deploy --> pull["git pull --ff-only"]

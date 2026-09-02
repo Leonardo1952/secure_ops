@@ -378,7 +378,7 @@ pip-audit
 CD flow:
 
 ```text
-push to main
+push to master
    |
    v
 CI approved
