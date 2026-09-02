@@ -55,6 +55,8 @@ The application records events such as:
 - `SUSPICIOUS_PATH`
 - `NGINX_403`
 - `NGINX_404`
+- `IP_BANNED`
+- `IP_UNBANNED`
 
 ---
 
@@ -90,6 +92,42 @@ Dry-run mode validates parsing without writing events or changing the checkpoint
 ```bash
 python scripts/nginx_collector.py --dry-run
 ```
+
+---
+
+## Fail2Ban Security Telemetry
+
+SecureOps also includes a one-shot Fail2Ban collector:
+
+```bash
+python scripts/fail2ban_collector.py
+```
+
+The collector is separate from Flask and Gunicorn. It reads the configured Fail2Ban log, converts relevant ban/unban actions into `SecurityEvent` records and exits. The web process does not read Fail2Ban logs, call `fail2ban-client`, execute privileged commands or require sudo.
+
+Configuration:
+
+```text
+FAIL2BAN_LOG=/var/log/fail2ban.log
+FAIL2BAN_COLLECTOR_STATE=instance/fail2ban_collector_state.json
+```
+
+Detected events:
+
+- `IP_BANNED` with `HIGH` severity for Fail2Ban `Ban` actions;
+- `IP_UNBANNED` with `INFO` severity for Fail2Ban `Unban` actions.
+
+The collector accepts any Fail2Ban jail name, including `sshd`, `nginx-http-auth` or `recidive`. It stores only minimized event data: action type, severity, source IP and the jail name in a short description. It does not store PID, full log lines, credentials, stack traces or Fail2Ban configuration.
+
+Checkpointing uses inode and byte offset in `instance/fail2ban_collector_state.json`, separate from the Nginx collector state. Each execution processes only new lines. If the log is rotated or truncated, the collector restarts from the beginning of the current file.
+
+Dry-run mode validates parsing without writing events or changing the checkpoint:
+
+```bash
+python scripts/fail2ban_collector.py --dry-run
+```
+
+A future production step can run this one-shot command through a dedicated systemd service and timer after log read permissions are reviewed manually.
 
 ---
 
