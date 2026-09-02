@@ -57,6 +57,8 @@ The application records events such as:
 - `NGINX_404`
 - `IP_BANNED`
 - `IP_UNBANNED`
+- `SSH_AUTH_FAILURE`
+- `SSH_INVALID_USER`
 
 ---
 
@@ -125,6 +127,44 @@ Dry-run mode validates parsing without writing events or changing the checkpoint
 
 ```bash
 python scripts/fail2ban_collector.py --dry-run
+```
+
+A future production step can run this one-shot command through a dedicated systemd service and timer after log read permissions are reviewed manually.
+
+---
+
+## SSH Security Telemetry
+
+SecureOps includes a one-shot SSH auth log collector:
+
+```bash
+python scripts/ssh_collector.py
+```
+
+The collector is separate from Flask and Gunicorn. It reads the configured auth log, converts relevant OpenSSH authentication failures into `SecurityEvent` records and exits. The web process does not read SSH logs, execute privileged commands, read SSH keys, read `authorized_keys` or modify `sshd_config`.
+
+Configuration:
+
+```text
+SSH_AUTH_LOG=/var/log/auth.log
+SSH_COLLECTOR_STATE=instance/ssh_collector_state.json
+```
+
+Detected events:
+
+- `SSH_AUTH_FAILURE` with `MEDIUM` severity for failed password or public key authentication;
+- `SSH_INVALID_USER` with `HIGH` severity for invalid user login attempts.
+
+If a line contains both an invalid user and an authentication failure, `SSH_INVALID_USER` takes precedence and only one event is created. Successful authentications are ignored in this phase.
+
+The collector stores only minimized event data: event type, severity, source IP and a short description. It does not store usernames, ports, PID, hostnames, original log lines, public keys or fingerprints. Traditional syslog timestamps such as `Sep  2 00:40:21` do not include a year, so SecureOps uses the `SecurityEvent` ingestion timestamp instead of reconstructing log time.
+
+Checkpointing uses inode and byte offset in `instance/ssh_collector_state.json`, separate from the Nginx and Fail2Ban collectors. Each execution processes only new lines. If the log is rotated or truncated, the collector restarts from the beginning of the current file.
+
+Dry-run mode validates parsing without writing events or changing the checkpoint:
+
+```bash
+python scripts/ssh_collector.py --dry-run
 ```
 
 A future production step can run this one-shot command through a dedicated systemd service and timer after log read permissions are reviewed manually.
